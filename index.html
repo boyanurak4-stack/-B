@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beam Simulator Pro (Apple Clean UI + True Scale)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --window-bg: #ffffff;
+            --system-bg: #f5f5f7;
+            --sidebar-bg: #fbfbfd;
+            --text-main: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent-blue: #0071e3;
+            
+            /* อัปเดตสีตามรูปภาพ UI ที่แนบมาแบบเป๊ะๆ */
+            --c-main: #2196F3;         /* สีน้ำเงินตามรูป Profile */
+            --c-extra: #FF9800;        /* สีส้ม */
+            --c-stirrup-out: #BA68C8;  /* สีม่วงตามเส้นตั้งในรูป Profile */
+            --c-stirrup-in: #F06292;   /* สีชมพูสำหรับปลอกใน (เผื่อมีการใช้งาน) */
+            
+            --border-color: rgba(0, 0, 0, 0.08);
+            --radius-window: 14px;
+            --radius-control: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Anuphan", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: -0.015em;
+        }
+
+        body {
+            background-color: var(--system-bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2vh 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .window {
+            width: 100%;
+            max-width: 1360px;
+            background: var(--window-bg);
+            border-radius: var(--radius-window);
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .title-bar {
+            background: #ffffff; height: 52px; padding: 0 24px;
+            display: flex; align-items: center; border-bottom: 1px solid var(--border-color); position: relative;
+        }
+
+        .traffic-lights { display: flex; gap: 8px; position: absolute; left: 20px; }
+        .light { width: 12.5px; height: 12.5px; border-radius: 50%; }
+        .light.close { background-color: #ff5f56; border: 0.5px solid #e0443e; }
+        .light.minimize { background-color: #ffbd2e; border: 0.5px solid #dea123; }
+        .light.maximize { background-color: #27c93f; border: 0.5px solid #1aab29; }
+
+        .window-title { width: 100%; text-align: center; font-size: 14.5px; font-weight: 600; color: var(--text-main); }
+
+        .app-body { display: grid; grid-template-columns: 420px 1fr; }
+
+        .sidebar { background: var(--sidebar-bg); padding: 24px; border-right: 1px solid var(--border-color); overflow-y: auto; max-height: calc(100vh - 100px); }
+        .main-content { padding: 24px; background: #ffffff; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; max-height: calc(100vh - 100px); }
+
+        .section-title {
+            font-size: 12px; font-weight: 700; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em; margin: 16px 0 12px 0;
+            padding-bottom: 6px; border-bottom: 0.5px solid rgba(0,0,0,0.06);
+        }
+        .section-title:first-child { margin-top: 0; }
+        .control-group { margin-bottom: 12px; }
+        .flex-row { display: flex; gap: 12px; align-items: flex-end; }
+        .flex-row .control-group { flex: 1; }
+
+        label { font-size: 12.5px; font-weight: 500; color: var(--text-main); display: block; margin-bottom: 6px; }
+        .display-val { color: var(--accent-blue); font-weight: 600; float: right; font-size: 12.5px; }
+
+        select, input[type="number"] {
+            width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.12);
+            border-radius: var(--radius-control); font-size: 13.5px; background-color: #ffffff;
+            color: var(--text-main); transition: all 0.2s ease; outline: none; font-weight: 500;
+        }
+        select:focus, input[type="number"]:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15); }
+
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 5px; background: #e5e5ea;
+            border-radius: 3px; outline: none; margin: 12px 0 8px 0;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
+            border-radius: 50%; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
+        }
+
+        .sub-panel { background: #f5f5f7; border: 1px solid rgba(0,0,0,0.04); padding: 14px; border-radius: var(--radius-control); margin-top: 8px; margin-bottom: 12px; }
+
+        /* ---------------- UI Result Cards ---------------- */
+        .result-container { display: flex; gap: 16px; margin-bottom: 4px; }
+        .res-box {
+            flex: 1; padding: 20px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.04);
+            text-align: center; display: flex; flex-direction: column; justify-content: center;
+        }
+        .res-box.blue { background-color: #f0f7ff; }
+        .res-box.orange { background-color: #fff8eb; }
+        .res-box label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .res-box span { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
+        .res-box.blue span { color: var(--accent-blue); }
+        .res-box.orange span { color: #d97706; }
+
+        .macos-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.02); }
+
+        .visualizer-container { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+        .visual-box {
+            background: #fbfbfd; border: 1px solid var(--border-color); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; padding: 20px 16px;
+            position: relative; min-height: 220px; overflow: hidden;
+        }
+
+        .clickable-sec { cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .clickable-sec:hover { background: #ffffff; border-color: var(--accent-blue); box-shadow: 0 8px 24px rgba(0,113,227,0.12); transform: translateY(-2px); z-index: 5; }
+        .clickable-sec::after {
+            content: "🔍 คลิกดู Detail ใน Popup"; position: absolute; bottom: 12px; right: 12px;
+            background: rgba(0, 113, 227, 0.95); color: white; padding: 6px 14px; border-radius: 20px;
+            font-size: 11.5px; font-weight: 600; opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(10px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3); backdrop-filter: blur(4px);
+        }
+        .clickable-sec:hover::after { opacity: 1; transform: translateY(0); }
+
+        svg.cross-sec { width: 100%; max-height: 200px; }
+        svg.long-sec { width: 100%; max-height: 200px; }
+
+        .ai-header { font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #1d1d1f; }
+        
+        .ai-alert-box { padding: 14px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 500; line-height: 1.5; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .ai-safe { background-color: #eafaf1; border: 1px solid #bdf0cc; color: #157a41; }
+        .ai-warning { background-color: #fff9e6; border: 1px solid #ffe5a0; color: #b46b00; }
+        /* อัปเดตโทนสีแดงให้ตรงกับภาพที่แนบมาแบบ 100% */
+        .ai-danger { background-color: #FBE9E7; border: 1px solid #FFCCBC; color: #D32F2F; font-size: 14px; }
+        .ai-waste { background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; }
+        .ai-seismic { background-color: #f9f9f9; border: 1px solid #e5e5ea; color: #4b5563; }
+
+        ul.details-list { margin: 0; padding-left: 20px; line-height: 1.8; font-size: 13.5px; color: #3a3a3c; }
+        ul.details-list li { margin-bottom: 6px; }
+        
+        .rebar-legend {
+            display: flex; gap: 16px; font-size: 12px; font-weight: 500;
+            background: #f5f5f7; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;
+            flex-wrap: wrap; justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        .badge {
+            position: absolute; top: 12px; left: 12px; background: #ffffff; padding: 4px 12px;
+            border-radius: 20px; font-size: 11.5px; font-weight: 600; color: #4b5563;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.05); z-index: 10;
+        }
+
+        /* ---------------- Modal Styles ---------------- */
+        .modal {
+            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease;
+        }
+        .modal.show { opacity: 1; }
+        .modal-content {
+            background: #ffffff; padding: 24px 28px; border-radius: 16px; 
+            width: 95%; max-width: 580px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15); 
+            position: relative; display: flex; flex-direction: column; align-items: center;
+            border: 1px solid rgba(255,255,255,0.8); transform: scale(0.97); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        }
+        .modal.show .modal-content { transform: scale(1); }
+        .modal-content.wide { max-width: 900px; }
+        
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center; 
+            width: 100%; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 14px;
+        }
+        .modal-header h3 { margin: 0; font-size: 16.5px; color: #1d1d1f; font-weight: 600; }
+        
+        .btn-download {
+            background: #f0f7ff; color: var(--accent-blue); border: 1px solid #cce3ff; padding: 7px 14px; 
+            border-radius: 980px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .btn-download:hover { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+
+        .close-btn {
+            background: #f5f5f7; border: none; width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; color: #86868b;
+            cursor: pointer; transition: all 0.2s; margin-left: 12px;
+        }
+        .close-btn:hover { background: #e5e5ea; color: #1d1d1f; }
+        
+        .segmented-control {
+            display: flex; background: #e5e5ea; padding: 3px; border-radius: 8px; margin-bottom: 16px; width: 100%; max-width: 360px;
+        }
+        .seg-btn {
+            flex: 1; padding: 6px 12px; text-align: center; font-size: 13.5px; font-weight: 600; color: #1d1d1f;
+            background: transparent; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+        }
+        .seg-btn.active { background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: var(--accent-blue); }
+
+        svg.modal-svg { width: 100%; height: auto; max-height: 480px; background: #fff; }
+
+        @media (max-width: 1024px) {
+            .app-body { grid-template-columns: 1fr; }
+            .visualizer-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">
+        <div class="traffic-lights"><div class="light close"></div><div class="light minimize"></div><div class="light maximize"></div></div>
+        <div class="window-title">Beam Simulator Pro (Apple Edition & CAD DXF)</div>
+    </div>
+
+    <div class="app-body">
+        <div class="sidebar">
+            <div class="section-title">1. ข้อมูลคานและโซนแผ่นดินไหว</div>
+            <div class="control-group">
+                <label>📍 โซนแผ่นดินไหว</label>
+                <select id="seismicZone" style="color: #0056b3; background-color: #f0f7ff; border-color: #cce3ff;">
+                    <option value="0">โซน 0: ทั่วไป (OMRF)</option>
+                    <option value="1" selected>โซน 1: กทม. / ปริมณฑล (IMRF)</option>
+                    <option value="2">โซน 2: เหนือ / ตะวันตก (SMRF)</option>
+                </select>
+            </div>
+
+            <div class="flex-row">
+                <div class="control-group" style="flex: 2;">
+                    <label>ประเภทคาน (Beam Type)</label>
+                    <select id="beamType">
+                        <option value="8" selected>คานช่วงเดียว / มีเสารับ 2 ฝั่ง</option>
+                        <option value="2">คานยื่น (Cantilever)</option>
+                    </select>
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label>ระยะสแปน (ม.) 🧠</label>
+                    <input type="number" id="spanInput" min="1" max="15" step="0.1" value="5.0" title="พิมพ์สแปนแล้ว AI จะแนะนำหน้าตัดคานให้อัตโนมัติ">
+                </div>
+            </div>
+            
+            <div class="flex-row">
+                <div class="control-group">
+                    <label>ความกว้าง b <span class="display-val"><span id="widthVal">20</span> ซม.</span></label>
+                    <input type="range" id="widthInput" min="15" max="60" step="5" value="20">
+                </div>
+                <div class="control-group">
+                    <label>ความลึก h <span class="display-val"><span id="heightVal">50</span> ซม.</span></label>
+                    <input type="range" id="heightInput" min="30" max="150" step="5" value="50">
+                </div>
+            </div>
+
+            <div class="section-title">2. ผนังและช่องเปิด</div>
+            <div class="flex-row">
+                <div class="control-group">
+                    <label>ชนิดผนัง</label>
+                    <select id="wallType">
+                        <option value="0">ไม่มีผนัง</option>
+                        <option value="90" selected>อิฐมวลเบา (90 kg/ตร.ม.)</option>
+                        <option value="180">อิฐมอญครึ่งแผ่น (180 kg/ตร.ม.)</option>
+                        <option value="360">อิฐมอญเต็มแผ่น (360 kg/ตร.ม.)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>ความสูงผนัง (ม.)</label>
+                    <input type="number" id="wallHeight" min="0" max="10" step="0.1" value="3.0">
+                </div>
+            </div>
+            
+            <div class="sub-panel">
+                <label style="color: var(--text-main); font-size: 11.5px; text-transform: uppercase;">หักลบช่องเปิดประตู / หน้าต่าง</label>
+                <div class="flex-row" style="margin-top: 6px;">
+                    <div class="control-group">
+                        <label>กว้างรวม (ม.)</label><input type="number" id="openW" min="0" step="0.1" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label>สูงรวม (ม.)</label><input type="number" id="openH" min="0" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="control-group" style="margin-bottom: 0;">
+                    <select id="openMat">
+                        <option value="25">อลูมิเนียม + กระจก (~25 kg/ม²)</option>
+                        <option value="20">บานไม้เนื้อแข็ง (~20 kg/ม²)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="section-title">3. พื้นและหลังคา</div>
+            <div class="sub-panel" style="background: #f0f7ff; border-color: #cce3ff;">
+                <label style="color: var(--accent-blue); font-size: 11.5px; text-transform: uppercase;">📐 ระยะพาดพื้น</label>
+                <div class="flex-row" style="margin-top: 6px;">
+                    <div class="control-group" style="flex: 1;">
+                        <label>สแปน (ม.)</label><input type="number" id="floorSpanInput" step="0.1" value="3.5">
+                    </div>
+                    <div class="control-group" style="flex: 1.5;">
+                        <label>การรับพื้น</label>
+                        <select id="floorSpanType">
+                            <option value="0.5" selected>1 ด้าน (ริมอาคาร)</option>
+                            <option value="1.0">2 ด้าน (กลางอาคาร)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-row">
+                <div class="control-group" style="flex: 2;">
+                    <label>ระบบพื้น (DL, LL)</label>
+                    <select id="floorType">
+                        <option value="0,0">ไม่มีพื้น</option>
+                        <option value="240,150" selected>ค.ส.ล. / พักอาศัย</option>
+                        <option value="250,250">สำเร็จรูป / สำนักงาน</option>
+                    </select>
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label>ชั้น</label><input type="number" id="floorCount" min="1" max="10" value="1">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>น้ำหนักระบบหลังคา (DL)</label>
+                <select id="roofType">
+                    <option value="0">ไม่มีหลังคา</option>
+                    <option value="5">โพลีคาร์บอเนต / ไวนิล (~5 kg/ม²)</option>
+                    <option value="15" selected>เมทัลชีท / ลอนคู่ (~10-20 kg/ม²)</option>
+                    <option value="80">กระเบื้องซีแพคโมเนีย (~80 kg/ม²)</option>
+                    <option value="240">ดาดฟ้าคอนกรีตหนา 10 ซม. (~240 kg/ม²)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="main-content">
+            
+            <div class="macos-card">
+                <div class="result-container">
+                    <div class="res-box blue">
+                        <label>น้ำหนักประลัย (W<sub>u</sub>)</label>
+                        <span id="loadOutput">0 kg/m</span>
+                    </div>
+                    <div class="res-box orange">
+                        <label>โมเมนต์ดัดสูงสุด (M<sub>u</sub>)</label>
+                        <span id="momentOutput">0 kg-m</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualizer-container">
+                <div class="visual-box clickable-sec" onclick="openModal('sectionModal')">
+                    <div class="badge">หน้าตัดคาน (Cross Section)</div>
+                    <svg id="beamSvg" class="cross-sec" viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="visual-box clickable-sec" onclick="openModal('profileModal')">
+                    <div class="badge" id="profileBadge">รูปตัดตามยาว (Longitudinal)</div>
+                    <svg id="profileSvg" class="long-sec" viewBox="0 0 800 240" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+            </div>
+            
+            <div class="macos-card">
+                <div class="ai-header">🧠 สรุปการจัดเหล็กเสริมตามมาตรฐาน (Apple Layers)</div>
+                <div class="rebar-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--c-main);"></div> เหล็กแกน (Main)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--c-extra);"></div> เหล็กพิเศษ (Extra)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--c-stirrup-out);"></div> ปลอกนอก (Outer Stirrup)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--c-stirrup-in);"></div> ปลอกใน (Inner Stirrup)</div>
+                </div>
+                <ul id="rebarDetail" class="details-list"></ul>
+                <div id="analysisDetail" style="margin-top: 16px;"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="sectionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>แบบขยายหน้าตัดคาน (Detail Section)</h3>
+            <div style="display:flex; align-items:center;">
+                <button class="btn-download" onclick="downloadSectionDXF()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    โหลด DXF
+                </button>
+                <button class="close-btn" onclick="closeModal('sectionModal')">&times;</button>
+            </div>
+        </div>
+        <div class="segmented-control" id="sectionViewToggles">
+            <button class="seg-btn active" id="btnSupport" onclick="setSectionView('support')">ริมเสา (Support)</button>
+            <button class="seg-btn" id="btnMidspan" onclick="setSectionView('midspan')">กลางคาน (Mid-Span)</button>
+        </div>
+        <svg id="modalSvg" class="modal-svg" viewBox="0 0 520 550" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+</div>
+
+<div id="profileModal" class="modal">
+    <div class="modal-content wide">
+        <div class="modal-header">
+            <h3>แบบขยายการเสริมเหล็กตามยาว (Longitudinal Profile Detail)</h3>
+            <div style="display:flex; align-items:center;">
+                <button class="btn-download" onclick="downloadProfileDXF()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    โหลด DXF
+                </button>
+                <button class="close-btn" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+        </div>
+        <svg id="modalProfileSvg" class="modal-svg" viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+</div>
+
+<script>
+    const autoSizeInputs = ['spanInput', 'beamType'];
+    const calcInputs = ['widthInput', 'heightInput', 'wallType', 'wallHeight', 'openW', 'openH', 'openMat', 'floorSpanInput', 'floorSpanType', 'floorType', 'floorCount', 'roofType', 'seismicZone'];
+    
+    let g_span, g_b, g_h, g_topMain, g_topExtra, g_botMain, g_botExtra, g_barSize, g_mu, g_vu, g_isCantilever, g_hasInnerStirrup, g_seismicZone;
+    let currentSectionView = 'support'; 
+
+    // นำค่าสีจาก CSS Root มาใช้งานในฟังก์ชันวาด SVG ให้ตรงกัน
+    const clrMain = "#2196F3";      
+    const clrExtra = "#FF9800";     
+    const clrStirrupOut = "#BA68C8";
+    const clrStirrupIn = "#F06292"; 
+
+    // ==========================================
+    // ส่วนเสริม DXF 1:1 Scale
+    // ==========================================
+    class DXFWriter {
+        constructor() { this.lines = []; }
+        addRect(x, y, w, h, color) {
+            this.addLine(x, y, x+w, y, color);
+            this.addLine(x+w, y, x+w, y-h, color);
+            this.addLine(x+w, y-h, x, y-h, color);
+            this.addLine(x, y-h, x, y, color);
+        }
+        addLine(x1, y1, x2, y2, color) {
+            this.lines.push(`0\nLINE\n8\n0\n62\n${color}\n10\n${x1}\n20\n${y1}\n11\n${x2}\n21\n${y2}`);
+        }
+        addCircle(x, y, r, color) {
+            this.lines.push(`0\nCIRCLE\n8\n0\n62\n${color}\n10\n${x}\n20\n${y}\n40\n${r}`);
+        }
+        addText(x, y, text, height, color) {
+            this.lines.push(`0\nTEXT\n8\n0\n62\n${color}\n10\n${x}\n20\n${y}\n40\n${height}\n1\n${text}`);
+        }
+        generate() {
+            return `0\nSECTION\n2\nENTITIES\n${this.lines.join('\n')}\n0\nENDSEC\n0\nEOF`;
+        }
+    }
+
+    function downloadSectionDXF() {
+        const dxf = new DXFWriter();
+        const w = g_b * 10, h = g_h * 10;
+        const cov = 35; 
+        const dia_cm = parseInt(g_barSize.replace(/\D/g, '')) / 10;
+        const r = (dia_cm * 10) / 2;
+
+        dxf.addRect(0, 0, w, h, 7); 
+        dxf.addRect(cov, -cov, w - 2*cov, h - 2*cov, 6); 
+
+        let t_ext = currentSectionView === 'support' ? g_topExtra : 0;
+        let b_ext = currentSectionView === 'midspan' && !g_isCantilever ? g_botExtra : 0;
+
+        const topY = -cov - r - 5;
+        const botY = -h + cov + r + 5;
+        const leftX = cov + r + 5;
+        const rightX = w - cov - r - 5;
+        const gapScale = Math.max(r*2, 25);
+        const innerDrawW = w - (cov * 2);
+
+        const renderBarsDXF = (mainCount, extraCount, baseY, isTop) => {
+            let total = mainCount + extraCount;
+            let maxVis = Math.max(2, Math.floor(innerDrawW / (r * 2 + gapScale)) + 1);
+            let l1 = total > maxVis ? maxVis : total;
+            let l2 = total > maxVis ? total - maxVis : 0;
+
+            for (let i = 0; i < l1; i++) {
+                let bx = l1 === 1 ? w/2 : leftX + (i * (rightX - leftX) / (l1 - 1));
+                dxf.addCircle(bx, baseY, r, 5); 
+            }
+            if (l2 > 0) {
+                let offY = isTop ? baseY - (dia_cm*10 + 25) : baseY + (dia_cm*10 + 25);
+                let inLeft = leftX + (l2 === 1 ? 0 : r*2.5);
+                let inRight = rightX - (l2 === 1 ? 0 : r*2.5);
+                for (let i = 0; i < l2; i++) {
+                    let bx = l2 === 1 ? w/2 : inLeft + (i * (inRight - inLeft) / (l2 - 1));
+                    dxf.addCircle(bx, offY, r, 40); 
+                }
+            }
+        };
+
+        renderBarsDXF(g_topMain, t_ext, topY, true);
+        renderBarsDXF(g_botMain, b_ext, botY, false);
+
+        dxf.addLine(0, 40, w, 40, 8); 
+        dxf.addText(w/2 - 30, 50, `${(g_b/100).toFixed(2)} m`, 20, 7);
+        dxf.addLine(-40, 0, -40, -h, 8); 
+        dxf.addText(-90, -h/2, `${(g_h/100).toFixed(2)} m`, 20, 7);
+
+        const blob = new Blob([dxf.generate()], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `Beam_Section_${currentSectionView}_${g_b}x${g_h}.dxf`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    function downloadProfileDXF() {
+        const dxf = new DXFWriter();
+        const span_mm = g_span * 1000, h_mm = g_h * 10, cov = 35;
+        dxf.addRect(0, 0, span_mm, h_mm, 7);
+        dxf.addRect(-200, 200, 200, h_mm + 400, 8);
+        if(!g_isCantilever) dxf.addRect(span_mm, 200, 200, h_mm + 400, 8);
+
+        const topY = -cov, botY = -h_mm + cov;
+        dxf.addLine(-150, topY, g_isCantilever ? span_mm : span_mm + 150, topY, 5);
+        dxf.addLine(-150, botY, g_isCantilever ? span_mm : span_mm + 150, botY, 5);
+
+        const L4 = span_mm / 4, extOff = 30;
+        if(g_topExtra > 0) {
+            dxf.addLine(-150, topY - extOff, L4, topY - extOff, 40);
+            if(!g_isCantilever) dxf.addLine(span_mm - L4, topY - extOff, span_mm + 150, topY - extOff, 40);
+        }
+        if(g_botExtra > 0 && !g_isCantilever) dxf.addLine(L4, botY + extOff, span_mm - L4, botY + extOff, 40);
+
+        let space = g_mu > 8000 ? 150 : 200;
+        for(let x = 50; x < span_mm; x += space) dxf.addLine(x, topY, x, botY, 6); 
+
+        dxf.addLine(0, 150, span_mm, 150, 8);
+        dxf.addText(span_mm/2 - 100, 180, `Span L = ${g_span} m`, 40, 7);
+
+        const blob = new Blob([dxf.generate()], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `Beam_Profile_L${g_span}m.dxf`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    // ==========================================
+
+    function autoSizeBeam() {
+        const span = parseFloat(document.getElementById('spanInput').value) || 0;
+        if (span === 0) return;
+        const beamDivisor = parseFloat(document.getElementById('beamType').value);
+        const isCantilever = (beamDivisor === 2);
+
+        let recommendedH = isCantilever ? (span * 100 / 5) : (span * 100 / 10);
+        recommendedH = Math.ceil(recommendedH / 5) * 5; 
+        if (recommendedH < 30) recommendedH = 30; if (recommendedH > 150) recommendedH = 150;
+
+        let recommendedB = Math.ceil((recommendedH / 2) / 5) * 5;
+        if (recommendedB < 15) recommendedB = 15; if (recommendedB > 60) recommendedB = 60;
+
+        document.getElementById('heightInput').value = recommendedH;
+        document.getElementById('widthInput').value = recommendedB;
+        document.getElementById('heightVal').innerText = recommendedH;
+        document.getElementById('widthVal').innerText = recommendedB;
+        
+        calculate(); 
+    }
+
+    // ---------------- 1. วาดหน้าตัดคาน (Main Dashboard) ----------------
+    function drawBeam(b, h, topMain, topExtra, botMain, botExtra, hasInnerStirrup, barSizeStr) {
+        const svgW = 280, svgH = 220, covering_cm = 3.5; 
+        const maxDrawW = 120, maxDrawH = 140;
+        let scale = Math.min(maxDrawW / b, maxDrawH / h);
+        if (scale < 1.5) scale = 1.5; if (scale > 5.0) scale = 5.0; 
+
+        let dia_cm = parseInt(barSizeStr.replace(/\D/g, '')) / 10; 
+        let rebarR = Math.max(3, (dia_cm / 2) * scale); 
+
+        const drawW = b * scale, drawH = h * scale;
+        const offsetX = (svgW - drawW) / 2, offsetY = (svgH - drawH) / 2;
+        const covScale = covering_cm * scale;
+        let stirrupThickness = Math.max(1.5, 0.9 * scale);
+        const stirrupW = drawW - (covScale * 2), stirrupH = drawH - (covScale * 2);
+        
+        let svgHTML = `<defs><filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.08"/></filter></defs>
+            <rect x="${offsetX}" y="${offsetY}" width="${drawW}" height="${drawH}" fill="#e8edf2" stroke="#64748b" stroke-width="2" rx="6" ry="6" filter="url(#shadow)"/>
+            <rect x="${offsetX + covScale}" y="${offsetY + covScale}" width="${stirrupW}" height="${stirrupH}" fill="none" stroke="${clrStirrupOut}" stroke-width="${stirrupThickness}" rx="5" ry="5" stroke-dasharray="4,2.5"/>`;
+
+        if (hasInnerStirrup) {
+            const innerStirrupW = stirrupW * 0.45;
+            const innerOffsetX = offsetX + covScale + (stirrupW - innerStirrupW) / 2;
+            svgHTML += `<rect x="${innerOffsetX}" y="${offsetY + covScale}" width="${innerStirrupW}" height="${stirrupH}" fill="none" stroke="${clrStirrupIn}" stroke-width="${stirrupThickness*0.8}" rx="3" ry="3" stroke-dasharray="2,2"/>`;
+        }
+
+        const topY = offsetY + covScale + rebarR + (stirrupThickness/2);
+        const botY = offsetY + drawH - covScale - rebarR - (stirrupThickness/2);
+        const leftX = offsetX + covScale + rebarR + (stirrupThickness/2);
+        const rightX = offsetX + drawW - covScale - rebarR - (stirrupThickness/2);
+        
+        const renderBars = (mainCount, extraCount, baseLayerY, isTop) => {
+            let dots = "";
+            let totalBars = mainCount + extraCount;
+            const gapScale = Math.max(rebarR, 2.5 * scale);
+            let maxVisBars = Math.max(2, Math.floor((drawW - covScale*2) / (rebarR * 2 + gapScale)) + 1); 
+            let layer1Count = totalBars > maxVisBars ? maxVisBars : totalBars;
+            let layer2Count = totalBars > maxVisBars ? totalBars - maxVisBars : 0;
+
+            for (let i = 0; i < layer1Count; i++) {
+                const x = layer1Count === 1 ? offsetX + drawW / 2 : leftX + (i * (rightX - leftX) / (layer1Count - 1));
+                dots += `<circle cx="${x}" cy="${baseLayerY}" r="${rebarR}" fill="${clrMain}" stroke="#ffffff" stroke-width="0.8"/>`;
+            }
+            if (layer2Count > 0) {
+                const offsetLayerY = isTop ? baseLayerY + ((dia_cm + 2.5) * scale) : baseLayerY - ((dia_cm + 2.5) * scale); 
+                const innerLeftX = leftX + (layer2Count === 1 ? 0 : rebarR*2.5);
+                const innerRightX = rightX - (layer2Count === 1 ? 0 : rebarR*2.5);
+                for (let i = 0; i < layer2Count; i++) {
+                    const x = layer2Count === 1 ? offsetX + drawW / 2 : innerLeftX + (i * (innerRightX - innerLeftX) / (layer2Count - 1));
+                    dots += `<circle cx="${x}" cy="${offsetLayerY}" r="${rebarR}" fill="${clrExtra}" stroke="#ffffff" stroke-width="0.8"/>`; 
+                }
+            }
+            return dots;
+        };
+
+        svgHTML += renderBars(topMain, topExtra, topY, true);
+        svgHTML += renderBars(botMain, botExtra, botY, false);
+        svgHTML += `
+            <text x="${offsetX + drawW/2}" y="${offsetY - 12}" font-size="12" font-weight="700" fill="#1e293b" text-anchor="middle">${b} cm</text>
+            <text x="${offsetX + drawW + 12}" y="${offsetY + drawH/2 + 4}" font-size="12" font-weight="700" fill="#1e293b">${h} cm</text>`;
+        document.getElementById('beamSvg').innerHTML = svgHTML;
+    }
+
+    // ---------------- 2. วาด Modal รูปตัดขวาง (Popup) ----------------
+    function setSectionView(viewType) {
+        currentSectionView = viewType;
+        document.getElementById('btnSupport').classList.remove('active');
+        document.getElementById('btnMidspan').classList.remove('active');
+        if (viewType === 'support') {
+            document.getElementById('btnSupport').classList.add('active');
+        } else {
+            document.getElementById('btnMidspan').classList.add('active');
+        }
+        drawModalBeam();
+    }
+
+    function drawModalBeam() {
+        const svgW = 520, svgH = 550;
+        const b = g_b, h = g_h;
+        const maxDrawW = 160, maxDrawH = 340; 
+        let scale = Math.min(maxDrawW / b, maxDrawH / h);
+        
+        const drawW = b * scale, drawH = h * scale;
+        const offsetX = 110, offsetY = (svgH - drawH) / 2 - 20; 
+        const covering_cm = 3.5;
+        const covScale = covering_cm * scale;
+        const stirrupW = drawW - (covScale * 2), stirrupH = drawH - (covScale * 2);
+        
+        let dia_cm = parseInt(g_barSize.replace(/\D/g, '')) / 10; 
+        let rebarR = (dia_cm / 2) * scale; 
+        
+        let svgHTML = `
+            <rect x="${offsetX}" y="${offsetY}" width="${drawW}" height="${drawH}" fill="#ffffff" stroke="#1d1d1f" stroke-width="2"/>
+            <rect x="${offsetX + covScale}" y="${offsetY + covScale}" width="${stirrupW}" height="${stirrupH}" fill="none" stroke="${clrStirrupOut}" stroke-width="2.5"/>
+        `;
+
+        if (g_hasInnerStirrup) {
+            const innerStirrupW = stirrupW * 0.45;
+            const innerOffsetX = offsetX + covScale + (stirrupW - innerStirrupW) / 2;
+            svgHTML += `<rect x="${innerOffsetX}" y="${offsetY + covScale}" width="${innerStirrupW}" height="${stirrupH}" fill="none" stroke="${clrStirrupIn}" stroke-width="2"/>`;
+        }
+
+        const topY = offsetY + covScale + rebarR + 1;
+        const botY = offsetY + drawH - covScale - rebarR - 1;
+        const leftX = offsetX + covScale + rebarR + 1;
+        const rightX = offsetX + drawW - covScale - rebarR - 1;
+        
+        let t_main = g_topMain;
+        let t_extra = currentSectionView === 'support' ? g_topExtra : 0;
+        
+        let b_main = g_botMain;
+        let b_extra = currentSectionView === 'midspan' && !g_isCantilever ? g_botExtra : 0;
+
+        const renderBarsModal = (mainCount, extraCount, baseLayerY, isTop) => {
+            let dots = "";
+            let l1 = mainCount + extraCount; 
+            for (let i = 0; i < l1; i++) {
+                const x = l1 === 1 ? offsetX + drawW / 2 : leftX + (i * (rightX - leftX) / (l1 - 1));
+                let dotColor = (i < mainCount) ? clrMain : clrExtra;
+                dots += `<circle cx="${x}" cy="${baseLayerY}" r="${rebarR}" fill="${dotColor}" />`;
+            }
+            return dots;
+        };
+
+        svgHTML += renderBarsModal(t_main, t_extra, topY, true);
+        svgHTML += renderBarsModal(b_main, b_extra, botY, false);
+
+        const dimOffset = 30;
+        const tick = 6;
+        svgHTML += `
+            <line x1="${offsetX}" y1="${offsetY - dimOffset}" x2="${offsetX + drawW}" y2="${offsetY - dimOffset}" stroke="#1d1d1f" stroke-width="1"/>
+            <line x1="${offsetX}" y1="${offsetY - dimOffset - tick}" x2="${offsetX}" y2="${offsetY}" stroke="#1d1d1f" stroke-width="1"/>
+            <line x1="${offsetX + drawW}" y1="${offsetY - dimOffset - tick}" x2="${offsetX + drawW}" y2="${offsetY}" stroke="#1d1d1f" stroke-width="1"/>
+            <text x="${offsetX + drawW/2}" y="${offsetY - dimOffset - 8}" font-size="14" font-family="-apple-system" font-weight="600" fill="#1d1d1f" text-anchor="middle">${(b/100).toFixed(2)}</text>
+            
+            <line x1="${offsetX - dimOffset}" y1="${offsetY}" x2="${offsetX - dimOffset}" y2="${offsetY + drawH}" stroke="#1d1d1f" stroke-width="1"/>
+            <line x1="${offsetX - dimOffset - tick}" y1="${offsetY}" x2="${offsetX}" y2="${offsetY}" stroke="#1d1d1f" stroke-width="1"/>
+            <line x1="${offsetX - dimOffset - tick}" y1="${offsetY + drawH}" x2="${offsetX}" y2="${offsetY + drawH}" stroke="#1d1d1f" stroke-width="1"/>
+            <g transform="translate(${offsetX - dimOffset - 10}, ${offsetY + drawH/2}) rotate(-90)">
+                <text x="0" y="0" font-size="14" font-family="-apple-system" font-weight="600" fill="#1d1d1f" text-anchor="middle">${(h/100).toFixed(2)}</text>
+            </g>
+        `;
+
+        const textStartX = offsetX + drawW + 30; 
+        
+        let topText = `<tspan fill="${clrMain}">Main: ${t_main}-${g_barSize}</tspan>`;
+        if(t_extra > 0) topText += ` / <tspan fill="${clrExtra}">Extra: ${t_extra}-${g_barSize}</tspan>`;
+        svgHTML += `
+            <line x1="${rightX + rebarR}" y1="${topY}" x2="${textStartX - 5}" y2="${topY}" stroke="#6e6e73" stroke-width="1"/>
+            <text x="${textStartX}" y="${topY + 5}" font-size="13.5" font-family="-apple-system" font-weight="600">${topText}</text>
+        `;
+
+        const midY = offsetY + drawH/2;
+        let shortStirrup = g_seismicZone === 2 ? "DB10" : "RB9";
+        let spacing = (currentSectionView === 'support' || g_seismicZone === 2) ? "0.15" : "0.20"; 
+        
+        let stirrupY = g_hasInnerStirrup ? midY - 12 : midY + 4;
+        svgHTML += `
+            <line x1="${offsetX + drawW - covScale}" y1="${midY}" x2="${textStartX - 5}" y2="${midY}" stroke="#6e6e73" stroke-width="1"/>
+            <text x="${textStartX}" y="${stirrupY}" font-size="13.5" font-family="-apple-system" font-weight="600" fill="${clrStirrupOut}">ปลอกนอก: ${shortStirrup}@${spacing}m</text>
+        `;
+        if (g_hasInnerStirrup) {
+            svgHTML += `<text x="${textStartX}" y="${stirrupY + 20}" font-size="13.5" font-family="-apple-system" font-weight="600" fill="${clrStirrupIn}">ปลอกใน: ${shortStirrup}@${spacing}m</text>`;
+        }
+
+        let botText = `<tspan fill="${clrMain}">Main: ${b_main}-${g_barSize}</tspan>`;
+        if(b_extra > 0) botText += ` / <tspan fill="${clrExtra}">Extra: ${b_extra}-${g_barSize}</tspan>`;
+        svgHTML += `
+            <line x1="${rightX + rebarR}" y1="${botY}" x2="${textStartX - 5}" y2="${botY}" stroke="#6e6e73" stroke-width="1"/>
+            <text x="${textStartX}" y="${botY + 5}" font-size="13.5" font-family="-apple-system" font-weight="600">${botText}</text>
+        `;
+
+        const titleY = offsetY + drawH + 50;
+        let spanText = currentSectionView === 'support' ? "Support Section (ริมเสา)" : "Mid Span Section (กลางคาน)";
+        if (g_isCantilever) spanText = "Cantilever Section";
+
+        svgHTML += `
+            <text x="${offsetX}" y="${titleY}" font-size="18" font-family="-apple-system" font-weight="700" fill="#1d1d1f">หน้าตัด ${b}x${h} cm</text>
+            <text x="${offsetX}" y="${titleY + 22}" font-size="14" font-family="-apple-system" fill="#4b5563">${spanText}</text>
+        `;
+        document.getElementById('modalSvg').innerHTML = svgHTML;
+    }
+
+    // ---------------- 3. วาดรูปตัดตามยาว (Main Dashboard) ----------------
+    function drawProfile(span, h, isCantilever, sagPixels) {
+        const svgW = 800, svgH = 220, spanPx = 580;
+        const startX = isCantilever ? 150 : 110, endX = startX + spanPx;
+        let visualH = h * 1.3; 
+        if(visualH > 100) visualH = 100; if(visualH < 35) visualH = 35;
+
+        const startY = (svgH - visualH) / 2;
+        let curveY = startY + sagPixels, curveYBot = startY + visualH + sagPixels;
+
+        let svgHTML = `<rect x="${startX - 40}" y="20" width="40" height="180" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>`;
+        if (!isCantilever) svgHTML += `<rect x="${endX}" y="20" width="40" height="180" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>`;
+
+        svgHTML += `<path d="M ${startX},${startY} Q ${startX + spanPx/2},${curveY} ${endX},${isCantilever ? startY+sagPixels : startY} L ${endX},${isCantilever ? startY+visualH+sagPixels : startY+visualH} Q ${startX + spanPx/2},${curveYBot} ${startX},${startY+visualH} Z" fill="#e8edf2" stroke="#64748b" stroke-width="2" />`;
+
+        const c = 6, L4 = spanPx / 4; 
+        svgHTML += `<path d="M ${startX-30},${startY+c} Q ${startX + spanPx/2},${curveY+c} ${endX},${isCantilever ? startY+c+sagPixels : startY+c}" fill="none" stroke="${clrMain}" stroke-width="2.5"/>`;
+        svgHTML += `<path d="M ${startX-30},${startY+visualH-c} Q ${startX + spanPx/2},${curveYBot-c} ${endX},${isCantilever ? startY+visualH-c+sagPixels : startY+visualH-c}" fill="none" stroke="${clrMain}" stroke-width="2.5"/>`;
+
+        svgHTML += `<path d="M ${startX-20},${startY+c+4} Q ${startX + L4/2},${startY+c+4 + (sagPixels*0.1)} ${startX+L4},${startY+c+4 + (sagPixels*0.2)}" fill="none" stroke="${clrExtra}" stroke-width="2.5"/>`;
+        if (!isCantilever) {
+            svgHTML += `<path d="M ${endX-L4},${startY+c+4 + (sagPixels*0.2)} Q ${endX - L4/2},${startY+c+4 + (sagPixels*0.1)} ${endX+20},${startY+c+4}" fill="none" stroke="${clrExtra}" stroke-width="2.5"/>`;
+            const midL = startX + L4, midR = endX - L4;
+            svgHTML += `<path d="M ${midL},${startY+visualH-c-4 + (sagPixels*0.8)} Q ${startX + spanPx/2},${curveYBot-c-4} ${midR},${startY+visualH-c-4 + (sagPixels*0.8)}" fill="none" stroke="${clrExtra}" stroke-width="2.5"/>`;
+        }
+
+        for (let x = startX + 10; x < endX; x += 15) {
+            let isDenseZone = (x < startX + L4) || (!isCantilever && x > endX - L4);
+            if (!isDenseZone && (x % 30 !== 0)) continue; 
+            svgHTML += `<line x1="${x}" y1="${startY+c}" x2="${x}" y2="${startY+visualH-c}" stroke="${clrStirrupOut}" stroke-width="1.5" />`;
+        }
+        document.getElementById('profileSvg').innerHTML = svgHTML;
+    }
+
+    // ---------------- 4. วาด Modal รูปตัดแนวยาว (Popup) ----------------
+    function drawModalProfile() {
+        const svgW = 920, svgH = 420;
+        const spanPx = 640;
+        const startX = g_isCantilever ? 180 : 130;
+        const endX = startX + spanPx;
+        const hPx = 80; 
+        const startY = 180;
+        const endY = startY + hPx;
+        
+        let svgHTML = `
+            <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1d1d1f" /></marker>
+                <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${clrMain}" /></marker>
+                <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${clrExtra}" /></marker>
+                <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${clrStirrupOut}" /></marker>
+            </defs>
+        `;
+
+        svgHTML += `<rect x="${startX - 40}" y="${startY - 60}" width="40" height="${hPx + 120}" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.5"/>`;
+        if (!g_isCantilever) svgHTML += `<rect x="${endX}" y="${startY - 60}" width="40" height="${hPx + 120}" fill="#ffffff" stroke="#1d1d1f" stroke-width="1.5"/>`;
+
+        svgHTML += `<rect x="${startX}" y="${startY}" width="${spanPx}" height="${hPx}" fill="none" stroke="#1d1d1f" stroke-width="2"/>`;
+
+        const c = 12; 
+        const topRebarY = startY + c;
+        const botRebarY = endY - c;
+
+        svgHTML += `<line x1="${startX - 30}" y1="${topRebarY}" x2="${g_isCantilever ? endX : endX + 30}" y2="${topRebarY}" stroke="${clrMain}" stroke-width="2.5"/>`;
+        svgHTML += `<line x1="${startX - 30}" y1="${botRebarY}" x2="${g_isCantilever ? endX : endX + 30}" y2="${botRebarY}" stroke="${clrMain}" stroke-width="2.5"/>`;
+
+        const L4 = spanPx / 4;
+        const extYOffset = 14;
+        
+        if (g_topExtra > 0) {
+            svgHTML += `<line x1="${startX - 20}" y1="${topRebarY + extYOffset}" x2="${startX + L4}" y2="${topRebarY + extYOffset}" stroke="${clrExtra}" stroke-width="3"/>`;
+            if (!g_isCantilever) svgHTML += `<line x1="${endX - L4}" y1="${topRebarY + extYOffset}" x2="${endX + 20}" y2="${topRebarY + extYOffset}" stroke="${clrExtra}" stroke-width="3"/>`;
+        }
+        if (g_botExtra > 0 && !g_isCantilever) {
+            svgHTML += `<line x1="${startX + L4 - 20}" y1="${botRebarY - extYOffset}" x2="${endX - L4 + 20}" y2="${botRebarY - extYOffset}" stroke="${clrExtra}" stroke-width="3"/>`;
+        }
+
+        for (let x = startX + 15; x < endX; x += 15) {
+            let isDense = (x < startX + L4) || (!g_isCantilever && x > endX - L4);
+            if (!isDense && (x % 30 !== 0)) continue;
+            svgHTML += `<line x1="${x}" y1="${topRebarY}" x2="${x}" y2="${botRebarY}" stroke="${clrStirrupOut}" stroke-width="1.5"/>`;
+        }
+
+        const dimY = startY - 30;
+        if (!g_isCantilever) {
+            svgHTML += `
+                <line x1="${startX}" y1="${dimY}" x2="${startX + L4}" y2="${dimY}" stroke="#1d1d1f" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                <line x1="${startX + L4}" y1="${dimY}" x2="${endX - L4}" y2="${dimY}" stroke="#1d1d1f" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                <line x1="${endX - L4}" y1="${dimY}" x2="${endX}" y2="${dimY}" stroke="#1d1d1f" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                <text x="${startX + L4/2}" y="${dimY - 8}" font-size="12" font-family="-apple-system" fill="#1d1d1f" text-anchor="middle">L/4</text>
+                <text x="${startX + spanPx/2}" y="${dimY - 8}" font-size="12" font-family="-apple-system" fill="#1d1d1f" text-anchor="middle">L/2 (Mid-Span)</text>
+                <text x="${endX - L4/2}" y="${dimY - 8}" font-size="12" font-family="-apple-system" fill="#1d1d1f" text-anchor="middle">L/4</text>
+            `;
+        }
+
+        svgHTML += `
+            <polyline points="${startX + 40},${topRebarY} ${startX + 30},${startY - 70} ${startX + 140},${startY - 70}" fill="none" stroke="${clrMain}" stroke-width="1.5" marker-start="url(#arrow-blue)"/>
+            <text x="${startX + 145}" y="${startY - 65}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrMain}">Main แกนบน: ${g_topMain}-${g_barSize}</text>
+        `;
+
+        if (g_topExtra > 0) {
+            svgHTML += `
+                <polyline points="${startX + L4 - 20},${topRebarY + extYOffset} ${startX + L4 + 10},${startY - 100} ${startX + spanPx/2 - 20},${startY - 100}" fill="none" stroke="${clrExtra}" stroke-width="1.5" marker-start="url(#arrow-orange)"/>
+                <text x="${startX + spanPx/2 - 15}" y="${startY - 95}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrExtra}">Extra ซ้าย: ${g_topExtra}-${g_barSize}</text>
+            `;
+        }
+
+        if (g_topExtra > 0 && !g_isCantilever) {
+            svgHTML += `
+                <polyline points="${endX - L4 + 20},${topRebarY + extYOffset} ${endX - L4 - 10},${startY - 100} ${endX - spanPx/2 + 20},${startY - 100}" fill="none" stroke="${clrExtra}" stroke-width="1.5" marker-start="url(#arrow-orange)"/>
+                <text x="${endX - spanPx/2 + 25}" y="${startY - 95}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrExtra}">Extra ขวา: ${g_topExtra}-${g_barSize}</text>
+            `;
+        }
+
+        svgHTML += `
+            <polyline points="${startX + 80},${botRebarY} ${startX + 70},${endY + 60} ${startX + 140},${endY + 60}" fill="none" stroke="${clrMain}" stroke-width="1.5" marker-start="url(#arrow-blue)"/>
+            <text x="${startX + 145}" y="${endY + 65}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrMain}">Main แกนล่าง: ${g_botMain}-${g_barSize}</text>
+        `;
+
+        if (g_botExtra > 0 && !g_isCantilever) {
+            svgHTML += `
+                <polyline points="${startX + spanPx/2 + 20},${botRebarY - extYOffset} ${startX + spanPx/2 + 30},${endY + 90} ${endX - 120},${endY + 90}" fill="none" stroke="${clrExtra}" stroke-width="1.5" marker-start="url(#arrow-orange)"/>
+                <text x="${endX - 115}" y="${endY + 95}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrExtra}">Extra กลางคาน: ${g_botExtra}-${g_barSize}</text>
+            `;
+        }
+
+        let shortStirrup = g_seismicZone === 2 ? "DB10" : "RB9";
+        let innerText = g_hasInnerStirrup ? ` / ปลอกใน ${shortStirrup}` : "";
+        svgHTML += `
+            <polyline points="${startX + L4/2},${startY + hPx/2} ${startX + L4/2 - 15},${endY + 110} ${startX + 10},${endY + 110}" fill="none" stroke="${clrStirrupOut}" stroke-width="1.5" marker-start="url(#arrow-purple)"/>
+            <text x="${startX + 15}" y="${endY + 115}" font-size="13" font-family="-apple-system" font-weight="bold" fill="${clrStirrupOut}">ปลอกนอก: ${shortStirrup}${innerText}</text>
+        `;
+
+        document.getElementById('modalProfileSvg').innerHTML = svgHTML;
+    }
+
+    function openModal(modalId) { 
+        if (modalId === 'sectionModal') setSectionView('support'); 
+        if (modalId === 'profileModal') drawModalProfile(); 
+        const m = document.getElementById(modalId);
+        m.style.display = 'flex'; 
+        setTimeout(() => m.classList.add('show'), 10); 
+    }
+    function closeModal(modalId) { 
+        const m = document.getElementById(modalId);
+        m.classList.remove('show');
+        setTimeout(() => m.style.display = 'none', 250);
+    }
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('sectionModal')) closeModal('sectionModal');
+        if (event.target == document.getElementById('profileModal')) closeModal('profileModal');
+    }
+
+    function calculate() {
+        const seismicZone = parseInt(document.getElementById('seismicZone').value);
+        const span = parseFloat(document.getElementById('spanInput').value) || 0;
+        const b = parseFloat(document.getElementById('widthInput').value);
+        const h = parseFloat(document.getElementById('heightInput').value);
+        const beamDivisor = parseFloat(document.getElementById('beamType').value);
+        const isCantilever = (beamDivisor === 2);
+        
+        document.getElementById('widthVal').innerText = b;
+        document.getElementById('heightVal').innerText = h;
+
+        const wallWgt = parseFloat(document.getElementById('wallType').value);
+        const wallHgt = parseFloat(document.getElementById('wallHeight').value) || 0;
+        const openW = parseFloat(document.getElementById('openW').value) || 0;
+        const openH = parseFloat(document.getElementById('openH').value) || 0;
+        const openMatWgt = parseFloat(document.getElementById('openMat').value);
+
+        const totalWallArea = span * wallHgt;
+        let openingArea = openW * openH;
+        if (openingArea > totalWallArea) openingArea = totalWallArea;
+        
+        const netWallArea = totalWallArea - openingArea;
+        const totalWallMass = (netWallArea * wallWgt) + (openingArea * openMatWgt);
+        const distributedWallLoad = span > 0 ? (totalWallMass / span) : 0;
+
+        const floorSpan = parseFloat(document.getElementById('floorSpanInput').value) || 0;
+        const floorMultiplier = parseFloat(document.getElementById('floorSpanType').value);
+        const trib = floorSpan * floorMultiplier;
+        
+        const floors = parseFloat(document.getElementById('floorCount').value) || 1;
+        const floorVals = document.getElementById('floorType').value.split(',');
+        const floorDL = parseFloat(floorVals[0]) * trib * floors;
+        const floorLL = parseFloat(floorVals[1]) * trib * floors;
+
+        const roofDL = parseFloat(document.getElementById('roofType').value) * trib;
+
+        const beamWgt = (b / 100) * (h / 100) * 2400; 
+        const totalDead = beamWgt + distributedWallLoad + floorDL + roofDL;
+        const wu = (1.4 * totalDead) + (1.7 * floorLL);
+        
+        const mu = (wu * Math.pow(span, 2)) / beamDivisor;
+        const vu = isCantilever ? (wu * span) : (wu * span / 2); 
+
+        document.getElementById('loadOutput').innerText = wu.toLocaleString(undefined, {maximumFractionDigits: 0}) + " kg/m";
+        document.getElementById('momentOutput').innerText = mu.toLocaleString(undefined, {maximumFractionDigits: 0}) + " kg-m";
+
+        const effective_d = h - 5;
+        const approximate_capacity = (15 * b * Math.pow(effective_d, 2)) / 100;
+        const capacityRatio = mu / approximate_capacity; 
+
+        let mainTensionBars = 2, extraTensionBars = 0;
+        let barSize = "DB16";
+
+        if (mu > 20000) { mainTensionBars = 4; extraTensionBars = 3; barSize = "DB25"; } 
+        else if (mu > 12000) { mainTensionBars = 3; extraTensionBars = 2; barSize = "DB20"; } 
+        else if (mu > 6000) { mainTensionBars = 3; extraTensionBars = 1; barSize = "DB20"; } 
+        else if (mu > 3000) { mainTensionBars = 3; extraTensionBars = 0; barSize = "DB16"; } 
+        else { mainTensionBars = 2; extraTensionBars = 0; barSize = "DB16"; }
+
+        let topMain, topExtra, botMain, botExtra;
+
+        if (isCantilever) {
+            topMain = mainTensionBars; topExtra = extraTensionBars;
+            botMain = Math.max(2, Math.ceil(topMain * 0.5)); botExtra = 0;
+        } else {
+            botMain = mainTensionBars; botExtra = extraTensionBars;
+            topMain = Math.max(2, Math.ceil(botMain * 0.5));
+            topExtra = Math.max(0, Math.ceil(topMain * 0.5)); 
+        }
+
+        let hasInnerStirrup = (b >= 40 || topMain + topExtra >= 5);
+        let shortStirrup = seismicZone === 2 ? "DB10" : "RB9";
+        const maxSeismicSpacing = Math.min(Math.floor(effective_d / 4), 15);
+        let spacingSupport = (seismicZone >= 1) ? maxSeismicSpacing : 15;
+        let spacingMid = (seismicZone >= 1) ? 20 : 20;
+
+        g_span = span; g_b = b; g_h = h; g_topMain = topMain; g_topExtra = topExtra; 
+        g_botMain = botMain; g_botExtra = botExtra; g_barSize = barSize; 
+        g_mu = mu; g_vu = vu; g_isCantilever = isCantilever; g_hasInnerStirrup = hasInnerStirrup;
+        g_seismicZone = seismicZone;
+
+        let h_req = isCantilever ? span * 20 : span * 10;
+        let sagPixels = 0;
+        if (capacityRatio > 1.0) sagPixels += (capacityRatio - 1) * 15; 
+        if (h < h_req) sagPixels += ((h_req - h) / h_req) * 20; 
+        if (sagPixels > 35) sagPixels = 35; 
+
+        drawBeam(b, h, topMain, topExtra, botMain, botExtra, hasInnerStirrup, barSize);
+        drawProfile(span, h, isCantilever, sagPixels);
+
+        let analysisHTML = "";
+        const dia_cm = parseInt(barSize.replace(/\D/g, '')) / 10;
+        const minReqWidth = 8 + ((botMain + botExtra) * dia_cm) + ((botMain + botExtra - 1) * 2.5);
+        let isCongested = (b < (minReqWidth * 0.75)); 
+
+        if (capacityRatio > 1.3) {
+            analysisHTML += `<div class="ai-alert-box ai-danger"><span>❌</span><div><b>วิกฤตอันตราย (Overload):</b> หน้าตัดรับน้ำหนักไม่ไหว! เกิดการตกท้องช้างรุนแรงตามภาพ <br>👉 <b>AI แนะนำ:</b> ต้องขยายความลึก (h) และ ความกว้าง (b) ทันที</div></div>`;
+        } else if (isCongested) {
+            analysisHTML += `<div class="ai-alert-box ai-warning"><span>⚠️</span><div><b>เหล็กหนาแน่น ซ้อนทับกัน (Congestion):</b> จำนวนเหล็กมากเกินกว่าความกว้าง (b) คอนกรีตอาจจะเทไม่ลงและเกิดโพรง <br>👉 <b>AI แนะนำ:</b> ขยายความกว้าง (b) อย่างน้อยเป็น ${Math.ceil(minReqWidth*0.8/5)*5} ซม.</div></div>`;
+        } else if (h < h_req * 0.85) {
+            analysisHTML += `<div class="ai-alert-box ai-warning"><span>⚠️</span><div><b>ระวังคานแอ่นตัวระยะยาว (Deflection):</b> แม้จะรับน้ำหนักไหว แต่ความลึกคานน้อยกว่ามาตรฐาน ทำให้คานแอ่นตัว (ดูรูปประกอบ) <br>👉 <b>AI แนะนำ:</b> ควรเพิ่มความลึก (h) ให้ถึง ${h_req.toFixed(0)} ซม.</div></div>`;
+        } else {
+            analysisHTML += `<div class="ai-alert-box ai-safe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><div><b>ขนาดหน้าตัดและเหล็กเสริมเหมาะสม:</b> ระบบได้จัดเหล็ก ซ้าย ขวา กลาง ครบถ้วนตามมาตรฐาน Apple Clean UI ครับ</div></div>`;
+        }
+        
+        document.getElementById('analysisDetail').innerHTML = analysisHTML;
+        
+        document.getElementById('rebarDetail').innerHTML = `
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrMain}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrMain};">เหล็กแกนหลักบน (Top Main):</b> วิ่งยาว ${topMain}-${barSize}</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrMain}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrMain};">เหล็กแกนหลักล่าง (Bot Main):</b> วิ่งยาว ${botMain}-${barSize}</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrExtra}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrExtra};">เหล็ก Extra บนริมซ้าย (Support L):</b> ${topExtra > 0 ? topExtra + "-" + barSize : "-ไม่มี-"}</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrExtra}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrExtra};">เหล็ก Extra บนริมขวา (Support R):</b> ${topExtra > 0 && !isCantilever ? topExtra + "-" + barSize : "-ไม่มี-"}</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrExtra}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrExtra};">เหล็ก Extra ล่างกลางคาน (Mid-Span):</b> ${botExtra > 0 && !isCantilever ? botExtra + "-" + barSize : "-ไม่มี-"}</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrStirrupOut}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrStirrupOut};">ปลอกนอก (Outer Stirrup):</b> ${shortStirrup} @ ${(spacingSupport/100).toFixed(2)}m (ริมเสา) / @ ${(spacingMid/100).toFixed(2)}m (กลางคาน)</li>
+            <li><span style="display:inline-block; width:6px; height:6px; background:${clrStirrupIn}; border-radius:50%; margin-right:8px;"></span><b style="color:${clrStirrupIn};">ปลอกใน (Inner Stirrup):</b> ${hasInnerStirrup ? `${shortStirrup} @ ${(spacingSupport/100).toFixed(2)}m (ริมเสา) / @ ${(spacingMid/100).toFixed(2)}m (กลางคาน)` : "-ไม่มี (ไม่จำเป็นต้องใส่)-"}</li>
+        `;
+    }
+
+    autoSizeInputs.forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.addEventListener('input', autoSizeBeam); 
+    });
+
+    calcInputs.forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.addEventListener('input', calculate); 
+    });
+    
+    autoSizeBeam();
+</script>
+
+</body>
+</html>
